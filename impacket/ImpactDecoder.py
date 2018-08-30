@@ -15,13 +15,13 @@
 
 import array
 
-import ImpactPacket
-import dot11
-import IP6
-import ICMP6
-import IP6_Extension_Headers
-from cdp import CDP
-from Dot11Crypto import RC4
+from . import ImpactPacket
+from . import dot11
+from . import IP6
+from . import ICMP6
+from . import IP6_Extension_Headers
+from .cdp import CDP
+from .Dot11Crypto import RC4
 from impacket import wps, eap, dhcp
 from impacket.dot11 import Dot11WEPData
 from impacket import LOG

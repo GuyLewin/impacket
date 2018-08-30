@@ -521,7 +521,7 @@ class MSSQL:
     
     def encryptPassword(self, password ):
 
-        return ''.join(map(lambda x: chr(((ord(x) & 0x0f) << 4) + ((ord(x) & 0xf0) >> 4) ^ 0xa5) , password))
+        return ''.join([chr(((ord(x) & 0x0f) << 4) + ((ord(x) & 0xf0) >> 4) ^ 0xa5) for x in password])
 
     def connect(self):
         af, socktype, proto, canonname, sa = socket.getaddrinfo(self.server, self.port, 0, socket.SOCK_STREAM)[0]

@@ -444,8 +444,7 @@ class EnumType(type):
     def __getattr__(self, attr):
         return self.enumItems[attr].value
 
-class NDRENUM(NDR):
-    __metaclass__ = EnumType
+class NDRENUM(NDR, metaclass=EnumType):
     align = 2
     align64 = 4
     structure = (

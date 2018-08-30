@@ -49,6 +49,7 @@ from Crypto.Util.number import GCD as gcd
 from Crypto.Cipher import AES, DES3, ARC4, DES
 from Crypto.Hash import HMAC, MD4, MD5, SHA
 from Crypto.Protocol.KDF import PBKDF2
+from functools import reduce
 
 
 def get_random_bytes(lenBytes):

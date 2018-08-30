@@ -38,11 +38,11 @@ from impacket.structure import Structure
 def format_structure(d, level=0):
     x = ""
     if isinstance(d, collections.Mapping):
-        lenk = max(map(lambda x: len(str(x)), d.keys()))
-        for k, v in d.items():
+        lenk = max([len(str(x)) for x in list(d.keys())])
+        for k, v in list(d.items()):
             key_text = "\n" + " "*level + " "*(lenk - len(str(k))) + str(k)
             x += key_text + ": " + format_structure(v, level=level+lenk)
-    elif isinstance(d, collections.Iterable) and not isinstance(d, basestring):
+    elif isinstance(d, collections.Iterable) and not isinstance(d, str):
         for e in d:
             x += "\n" + " "*level + "- " + format_structure(e, level=level+4)
     else:
@@ -503,7 +503,7 @@ class PROPERTY_LOOKUP_TABLE(Structure):
 
             propTable = propTable[self.PropertyLookupSize:]
 
-        return OrderedDict(sorted(properties.items(), key=lambda x:x[1]['order']))
+        return OrderedDict(sorted(list(properties.items()), key=lambda x:x[1]['order']))
         #return properties
 
 # 2.2.66 Heap

@@ -8,9 +8,9 @@
 import struct
 import array
 
-from ImpactPacket import Header
-from IP6_Address import IP6_Address
-from IP6_Extension_Headers import IP6_Extension_Header
+from .ImpactPacket import Header
+from .IP6_Address import IP6_Address
+from .IP6_Extension_Headers import IP6_Extension_Header
 
 from impacket import LOG
 

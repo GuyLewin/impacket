@@ -19,6 +19,7 @@ import socket
 import string
 import sys
 from binascii import hexlify
+from functools import reduce
 
 """Classes to build network packets programmatically.
 
@@ -34,7 +35,7 @@ class ImpactPacketException(Exception):
     def __init__(self, value):
         self.value = value
     def __str__(self):
-        return `self.value`
+        return repr(self.value)
 
 class PacketBuffer(object):
     """Implement the basic operations utilized to operate on a
@@ -362,7 +363,7 @@ class ProtocolPacket(ProtocolLayer):
 class Header(PacketBuffer,ProtocolLayer):
     "This is the base class from which all protocol definitions extend."
 
-    packet_printable = filter(lambda c: c not in string.whitespace, string.printable) + ' '
+    packet_printable = [c for c in string.printable if c not in string.whitespace] + ' '
 
     ethertype = None
     protocol = None
@@ -650,7 +651,7 @@ class Ethernet(Header):
 
     @staticmethod
     def as_eth_addr(anArray):
-        tmp_list = map(lambda x: x > 15 and '%x'%x or '0%x'%x, anArray)
+        tmp_list = [x > 15 and '%x'%x or '0%x'%x for x in anArray]
         return '' + reduce(lambda x, y: x+':'+y, tmp_list)
 
     def __str__(self):
