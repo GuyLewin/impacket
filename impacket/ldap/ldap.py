@@ -465,7 +465,7 @@ class LDAPConnection:
 
     def _parseFilter(self, filterStr):
         try:
-            filterList = list(reversed(unicode(filterStr)))
+            filterList = list(reversed(str(filterStr)))
         except UnicodeDecodeError:
             filterList = list(reversed(filterStr))
         searchFilter = self._consumeCompositeFilter(filterList)

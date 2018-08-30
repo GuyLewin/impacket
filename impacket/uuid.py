@@ -19,17 +19,17 @@ from struct import pack, unpack
 
 def generate():
     # UHm... crappy Python has an maximum integer of 2**31-1.
-    top = (1L<<31)-1
+    top = (1<<31)-1
     return pack("IIII", randrange(top), randrange(top), randrange(top), randrange(top))
 
 def bin_to_string(uuid):
-    uuid1, uuid2, uuid3 = unpack('<LHH', uuid[:8])
-    uuid4, uuid5, uuid6 = unpack('>HHL', uuid[8:16])
+    uuid1, uuid2, uuid3 = unpack('<LHH', uuid[:8].encode("latin1"))
+    uuid4, uuid5, uuid6 = unpack('>HHL', uuid[8:16].encode("latin1"))
     return '%08X-%04X-%04X-%04X-%04X%08X' % (uuid1, uuid2, uuid3, uuid4, uuid5, uuid6)
 
 def string_to_bin(uuid):
     matches = re.match('([\dA-Fa-f]{8})-([\dA-Fa-f]{4})-([\dA-Fa-f]{4})-([\dA-Fa-f]{4})-([\dA-Fa-f]{4})([\dA-Fa-f]{8})', uuid)
-    (uuid1, uuid2, uuid3, uuid4, uuid5, uuid6) = map(lambda x: long(x, 16), matches.groups())
+    (uuid1, uuid2, uuid3, uuid4, uuid5, uuid6) = [int(x, 16) for x in matches.groups()]
     uuid = pack('<LHH', uuid1, uuid2, uuid3)
     uuid += pack('>HHL', uuid4, uuid5, uuid6)
     return uuid
@@ -45,7 +45,7 @@ def uuidtup_to_bin(tup):
 def bin_to_uuidtup(bin):
     assert len(bin) == 20
     uuidstr = bin_to_string(bin[:16])
-    maj, min = unpack("<HH", bin[16:])
+    maj, min = unpack("<HH", bin[16:].encode("latin1"))
     return uuidstr, "%d.%d" % (maj, min)
 
 #input: string

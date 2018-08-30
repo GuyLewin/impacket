@@ -33,7 +33,7 @@
 import os
 import random
 import time
-from urlparse import urlparse
+from urllib.parse import urlparse
 from impacket import LOG
 from threading import Thread
 
@@ -79,7 +79,7 @@ class TargetsProcessor:
                     target = line.strip()
                     if target is not None:
                         self.originalTargets.extend(self.processTarget(target, self.protocolClients))
-        except IOError, e:
+        except IOError as e:
             LOG.error("Could not open file: %s - " % (self.filename, str(e)))
 
         if len(self.originalTargets) == 0:

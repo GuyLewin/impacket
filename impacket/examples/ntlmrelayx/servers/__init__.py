@@ -1,2 +1,2 @@
-from httprelayserver import HTTPRelayServer
-from smbrelayserver import SMBRelayServer
+from .httprelayserver import HTTPRelayServer
+from .smbrelayserver import SMBRelayServer

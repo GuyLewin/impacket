@@ -44,7 +44,7 @@ except:
 # The rest it processed through the standard impacket logging mech.
 class DummyPrint:        
     def logMessage(self,message):
-        print message,
+        print(message)
 
 # MC-SQLR Constants and Structures
 SQLR_PORT           = 1434
@@ -682,8 +682,8 @@ class MSSQL:
 
         login = TDS_LOGIN()
 
-        login['HostName'] = (''.join([random.choice(string.letters) for _ in range(8)])).encode('utf-16le')
-        login['AppName']  = (''.join([random.choice(string.letters) for _ in range(8)])).encode('utf-16le')
+        login['HostName'] = (''.join([random.choice(string.ascii_letters) for _ in range(8)])).encode('utf-16le')
+        login['AppName']  = (''.join([random.choice(string.ascii_letters) for _ in range(8)])).encode('utf-16le')
         login['ServerName'] = self.server.encode('utf-16le')
         login['CltIntName']  = login['AppName']
         login['ClientPID'] = random.randint(0,1024)
@@ -767,7 +767,7 @@ class MSSQL:
                 if TGS is None:
                     try:
                         tgt, cipher, oldSessionKey, sessionKey = getKerberosTGT(userName, password, domain, lmhash, nthash, aesKey, kdcHost)
-                    except KerberosError, e:
+                    except KerberosError as e:
                         if e.getErrorCode() == constants.ErrorCodes.KDC_ERR_ETYPE_NOSUPP.value:
                             # We might face this if the target does not support AES
                             # So, if that's the case we'll force using RC4 by converting
@@ -802,7 +802,7 @@ class MSSQL:
                 serverName = Principal('MSSQLSvc/%s.%s:%d' % (self.server.split('.')[0], domain, self.port), type=constants.PrincipalNameType.NT_SRV_INST.value)
                 try:
                     tgs, cipher, oldSessionKey, sessionKey = getKerberosTGS(serverName, domain, kdcHost, tgt, cipher, sessionKey)
-                except KerberosError, e:
+                except KerberosError as e:
                     if e.getErrorCode() == constants.ErrorCodes.KDC_ERR_ETYPE_NOSUPP.value:
                         # We might face this if the target does not support AES
                         # So, if that's the case we'll force using RC4 by converting
@@ -886,7 +886,7 @@ class MSSQL:
 
         self.replies = self.parseReply(tds['Data'])
 
-        if self.replies.has_key(TDS_LOGINACK_TOKEN):
+        if TDS_LOGINACK_TOKEN in self.replies:
             return True
         else:
             return False
@@ -930,8 +930,8 @@ class MSSQL:
 
         login = TDS_LOGIN()
 
-        login['HostName'] = (''.join([random.choice(string.letters) for i in range(8)])).encode('utf-16le')
-        login['AppName']  = (''.join([random.choice(string.letters) for i in range(8)])).encode('utf-16le')
+        login['HostName'] = (''.join([random.choice(string.ascii_letters) for i in range(8)])).encode('utf-16le')
+        login['AppName']  = (''.join([random.choice(string.ascii_letters) for i in range(8)])).encode('utf-16le')
         login['ServerName'] = self.server.encode('utf-16le')
         login['CltIntName']  = login['AppName']
         login['ClientPID'] = random.randint(0,1024)
@@ -974,7 +974,7 @@ class MSSQL:
 
         self.replies = self.parseReply(tds['Data'])
 
-        if self.replies.has_key(TDS_LOGINACK_TOKEN):
+        if TDS_LOGINACK_TOKEN in self.replies:
             return True
         else:
             return False
@@ -1043,7 +1043,7 @@ class MSSQL:
             self.__rowsPrinter.logMessage('\n')
 
     def printReplies(self):
-        for keys in self.replies.keys():
+        for keys in list(self.replies.keys()):
             for i, key in enumerate(self.replies[keys]):
                 if key['TokenType'] == TDS_ERROR_TOKEN:
                     error =  "ERROR(%s): Line %d: %s" % (key['ServerName'].decode('utf-16le'), key['LineNumber'], key['MsgText'].decode('utf-16le'))                                      
@@ -1515,7 +1515,7 @@ class MSSQL:
                 LOG.error("Unknown Token %x" % tokenID)
                 return replies
 
-            if replies.has_key(tokenID) is not True:
+            if (tokenID in replies) is not True:
                 replies[tokenID] = list()
 
             replies[tokenID].append(token)

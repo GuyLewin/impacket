@@ -53,7 +53,7 @@ from Crypto.Protocol.KDF import PBKDF2
 
 def get_random_bytes(lenBytes):
     # We don't really need super strong randomness here to use PyCrypto.Random
-    return "".join([random.choice(string.digits+string.letters) for i in xrange(lenBytes)])
+    return "".join([random.choice(string.digits+string.ascii_letters) for i in range(lenBytes)])
 
 
 class Enctype(object):
@@ -92,7 +92,7 @@ def _zeropad(s, padsize):
 def _xorbytes(b1, b2):
     # xor two strings together and return the resulting string.
     assert len(b1) == len(b2)
-    return ''.join(chr(ord(x) ^ ord(y)) for x, y in zip(b1, b2))
+    return ''.join(chr(ord(x) ^ ord(y)) for x, y in list(zip(b1, b2)))
 
 
 def _mac_equal(mac1, mac2):
@@ -114,7 +114,7 @@ def _nfold(str, nbytes):
         nbytes, remain = (nbits//8) % len(str), nbits % 8
         return ''.join(chr((ord(str[i-nbytes]) >> remain) |
                            ((ord(str[i-nbytes-1]) << (8-remain)) & 0xff))
-                       for i in xrange(len(str)))
+                       for i in range(len(str)))
 
     # Add equal-length strings together with end-around carry.
     def add_ones_complement(str1, str2):
@@ -122,7 +122,7 @@ def _nfold(str, nbytes):
         v = [ord(a) + ord(b) for a, b in zip(str1, str2)]
         # Propagate carry bits to the left until there aren't any left.
         while any(x & ~0xff for x in v):
-            v = [(v[i-n+1]>>8) + (v[i]&0xff) for i in xrange(n)]
+            v = [(v[i-n+1]>>8) + (v[i]&0xff) for i in range(n)]
         return ''.join(chr(x) for x in v)
 
     # Concatenate copies of str to produce the least common multiple
@@ -132,8 +132,8 @@ def _nfold(str, nbytes):
     # big-endian ones' complement integers.
     slen = len(str)
     lcm = nbytes * slen / gcd(nbytes, slen)
-    bigstr = ''.join((rotate_right(str, 13 * i) for i in xrange(lcm / slen)))
-    slices = (bigstr[p:p+nbytes] for p in xrange(0, lcm, nbytes))
+    bigstr = ''.join((rotate_right(str, 13 * i) for i in range(lcm / slen)))
+    slices = (bigstr[p:p+nbytes] for p in range(0, lcm, nbytes))
     return reduce(add_ones_complement, slices)
 
 
@@ -380,7 +380,7 @@ class _DES3CBC(_SimplifiedEnctype):
                 return b if bin(b & ~1).count('1') % 2 else b | 1
             assert len(seed) == 7
             firstbytes = [parity(ord(b) & ~1) for b in seed]
-            lastbyte = parity(sum((ord(seed[i])&1) << i+1 for i in xrange(7)))
+            lastbyte = parity(sum((ord(seed[i])&1) << i+1 for i in range(7)))
             keybytes = ''.join(chr(b) for b in firstbytes + [lastbyte])
             if _is_weak_des_key(keybytes):
                 keybytes[7] = chr(ord(keybytes[7]) ^ 0xF0)
@@ -445,7 +445,7 @@ class _AESEnctype(_SimplifiedEnctype):
         if len(ciphertext) == 16:
             return aes.decrypt(ciphertext)
         # Split the ciphertext into blocks.  The last block may be partial.
-        cblocks = [ciphertext[p:p+16] for p in xrange(0, len(ciphertext), 16)]
+        cblocks = [ciphertext[p:p+16] for p in range(0, len(ciphertext), 16)]
         lastlen = len(cblocks[-1])
         # CBC-decrypt all but the last two blocks.
         prev_cblock = '\0' * 16

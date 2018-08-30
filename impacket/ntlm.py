@@ -206,7 +206,7 @@ class AV_PAIRS:
         self.fields[key] = (len(value),value)
 
     def __getitem__(self, key):
-        if self.fields.has_key(key):
+        if key in self.fields:
            return self.fields[key]
         return None
 
@@ -223,28 +223,31 @@ class AV_PAIRS:
         tInfo = data
         fType = 0xff
         while fType is not NTLMSSP_AV_EOL:
-            fType = struct.unpack('<H',tInfo[:struct.calcsize('<H')])[0]
+            fType = struct.unpack('<H',tInfo[:struct.calcsize('<H')].encode("latin1"))[0]
             tInfo = tInfo[struct.calcsize('<H'):]
-            length = struct.unpack('<H',tInfo[:struct.calcsize('<H')])[0]
+            length = struct.unpack('<H',tInfo[:struct.calcsize('<H')].encode("latin1"))[0]
             tInfo = tInfo[struct.calcsize('<H'):]
             content = tInfo[:length]
             self.fields[fType]=(length,content)
             tInfo = tInfo[length:]
 
     def dump(self):
-        for i in self.fields.keys():
-            print "%s: {%r}" % (i,self[i])
+        for i in list(self.fields.keys()):
+            print(("%s: {%r}" % (i,self[i])))
 
     def getData(self):
-        if self.fields.has_key(NTLMSSP_AV_EOL):
+        if NTLMSSP_AV_EOL in self.fields:
             del self.fields[NTLMSSP_AV_EOL]
         ans = ''
-        for i in self.fields.keys():
-            ans+= struct.pack('<HH', i, self[i][0])
-            ans+= self[i][1]
+        for i in list(self.fields.keys()):
+            ans+= struct.pack('<HH', i, self[i][0]).decode("latin1")
+            try:
+                ans+= self[i][1]
+            except TypeError:
+                ans += self[i][1].decode("latin1")
  
         # end with a NTLMSSP_AV_EOL
-        ans += struct.pack('<HH', NTLMSSP_AV_EOL, 0)
+        ans += struct.pack('<HH', NTLMSSP_AV_EOL, 0).decode("latin1")
 
         return ans
 
@@ -529,6 +532,8 @@ class NTLMMessageSignature(ExtendedOrNotMessageSignature):
 KNOWN_DES_INPUT = "KGS!@#$%"
 
 def __expand_DES_key( key):
+    if type(key) is bytes:
+        key = key.decode("latin1")
     # Expand the key from a 7-byte password key into a 8-byte DES key
     key  = key[:7]
     key += '\x00'*(7-len(key))
@@ -543,8 +548,8 @@ def __expand_DES_key( key):
     return s
 
 def __DES_block(key, msg):
-    cipher = DES.new(__expand_DES_key(key),DES.MODE_ECB)
-    return cipher.encrypt(msg)
+    cipher = DES.new(__expand_DES_key(key).encode("latin1"),DES.MODE_ECB)
+    return cipher.encrypt(msg.encode("latin1"))
 
 def ntlmssp_DES_encrypt(key, challenge):
     answer  = __DES_block(key[:7], challenge)
@@ -619,7 +624,7 @@ def getNTLMSSPType3(type1, type2, user, password, domain, lmhash = '', nthash = 
     # method we will create a valid ChallengeResponse
     ntlmChallengeResponse = NTLMAuthChallengeResponse(user, password, ntlmChallenge['challenge'])
 
-    clientChallenge = "".join([random.choice(string.digits+string.letters) for _ in xrange(8)])
+    clientChallenge = "".join([random.choice(string.digits+string.ascii_letters) for _ in range(8)])
 
     serverName = ntlmChallenge['TargetInfoFields']
 
@@ -658,7 +663,7 @@ def getNTLMSSPType3(type1, type2, user, password, domain, lmhash = '', nthash = 
     if ntlmChallenge['flags'] & NTLMSSP_NEGOTIATE_KEY_EXCH:
        # not exactly what I call random tho :\
        # exportedSessionKey = this is the key we should use to sign
-       exportedSessionKey = "".join([random.choice(string.digits+string.letters) for _ in xrange(16)])
+       exportedSessionKey = "".join([random.choice(string.digits+string.ascii_letters) for _ in range(16)])
        #exportedSessionKey = "A"*16
        #print "keyExchangeKey %r" % keyExchangeKey
        # Let's generate the right session key based on the challenge flags
@@ -751,7 +756,7 @@ def LMOWFv1(password, lmhash = '', nthash=''):
 def compute_nthash(password):
     # This is done according to Samba's encryption specification (docs/html/ENCRYPTION.html)
     try:
-        password = unicode(password).encode('utf_16le')
+        password = str(password).encode('utf_16le')
     except UnicodeDecodeError:
         import sys
         password = password.decode(sys.getfilesystemencoding()).encode('utf_16le')
@@ -770,24 +775,26 @@ def get_ntlmv1_response(key, challenge):
 def MAC(flags, handle, signingKey, seqNum, message):
    # [MS-NLMP] Section 3.4.4
    # Returns the right messageSignature depending on the flags
+   if type(message) is str:
+       message = message.encode("latin1")
    messageSignature = NTLMMessageSignature(flags)
    if flags & NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY:
        if flags & NTLMSSP_NEGOTIATE_KEY_EXCH:
            messageSignature['Version'] = 1
            messageSignature['Checksum'] = \
-           struct.unpack('<q', handle(hmac_md5(signingKey, struct.pack('<i', seqNum) + message)[:8]))[0]
+           struct.unpack('<q', handle(hmac_md5(signingKey.encode("latin1"), struct.pack('<i', seqNum) + message)[:8].encode("latin1")))[0]
            messageSignature['SeqNum'] = seqNum
            seqNum += 1
        else:
            messageSignature['Version'] = 1
-           messageSignature['Checksum'] = struct.unpack('<q',hmac_md5(signingKey, struct.pack('<i',seqNum)+message)[:8])[0]
+           messageSignature['Checksum'] = struct.unpack('<q',hmac_md5(signingKey, struct.pack('<i',seqNum).decode("latin1")+message)[:8])[0]
            messageSignature['SeqNum'] = seqNum
            seqNum += 1
    else:
        messageSignature['Version'] = 1
-       messageSignature['Checksum'] = struct.pack('<i',binascii.crc32(message))
+       messageSignature['Checksum'] = struct.pack('<i',binascii.crc32(message)).decode("latin1")
        messageSignature['RandomPad'] = 0
-       messageSignature['RandomPad'] = handle(struct.pack('<i',messageSignature['RandomPad']))
+       messageSignature['RandomPad'] = handle(struct.pack('<i',messageSignature['RandomPad']).decode("latin1"))
        messageSignature['Checksum'] = struct.unpack('<i',handle(messageSignature['Checksum']))[0]
        messageSignature['SeqNum'] = handle('\x00\x00\x00\x00')
        messageSignature['SeqNum'] = struct.unpack('<i',messageSignature['SeqNum'])[0] ^ seqNum
@@ -796,9 +803,9 @@ def MAC(flags, handle, signingKey, seqNum, message):
    return messageSignature
 
 def SEAL(flags, signingKey, sealingKey, messageToSign, messageToEncrypt, seqNum, handle):
-   sealedMessage = handle(messageToEncrypt)
+   sealedMessage = handle(messageToEncrypt.encode("latin1"))
    signature = MAC(flags, handle, signingKey, seqNum, messageToSign)
-   return sealedMessage, signature
+   return sealedMessage.decode("latin1"), signature
 
 def SIGN(flags, signingKey, message, seqNum, handle):
    return MAC(flags, handle, signingKey, seqNum, message)
@@ -807,12 +814,12 @@ def SIGNKEY(flags, randomSessionKey, mode = 'Client'):
    if flags & NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY:
        if mode == 'Client':
            md5 = hashlib.new('md5')
-           md5.update(randomSessionKey + "session key to client-to-server signing key magic constant\x00")
-           signKey = md5.digest()
+           md5.update(randomSessionKey.encode("latin1") + b"session key to client-to-server signing key magic constant\x00")
+           signKey = md5.digest().decode("latin1")
        else:
            md5 = hashlib.new('md5')
-           md5.update(randomSessionKey + "session key to server-to-client signing key magic constant\x00")
-           signKey = md5.digest()
+           md5.update(randomSessionKey.encode("latin1") + b"session key to server-to-client signing key magic constant\x00")
+           signKey = md5.digest().decode("latin1")
    else:
        signKey = None
    return signKey
@@ -828,12 +835,12 @@ def SEALKEY(flags, randomSessionKey, mode = 'Client'):
 
        if mode == 'Client':
                md5 = hashlib.new('md5')
-               md5.update(sealKey + 'session key to client-to-server sealing key magic constant\x00')
-               sealKey = md5.digest()
+               md5.update(sealKey.encode("latin1") + b'session key to client-to-server sealing key magic constant\x00')
+               sealKey = md5.digest().decode("latin1")
        else:
                md5 = hashlib.new('md5')
-               md5.update(sealKey + 'session key to server-to-client sealing key magic constant\x00')
-               sealKey = md5.digest()
+               md5.update(sealKey.encode("latin1") + b'session key to server-to-client sealing key magic constant\x00')
+               sealKey = md5.digest().decode("latin1")
 
    elif flags & NTLMSSP_NEGOTIATE_56:
        sealKey = randomSessionKey[:7] + '\xa0'
@@ -844,10 +851,10 @@ def SEALKEY(flags, randomSessionKey, mode = 'Client'):
 
 
 def generateEncryptedSessionKey(keyExchangeKey, exportedSessionKey):
-   cipher = ARC4.new(keyExchangeKey)
+   cipher = ARC4.new(keyExchangeKey.encode("latin1"))
    cipher_encrypt = cipher.encrypt
 
-   sessionKey = cipher_encrypt(exportedSessionKey)
+   sessionKey = cipher_encrypt(exportedSessionKey.encode("latin1"))
    return sessionKey
 
 def KXKEY(flags, sessionBaseKey, lmChallengeResponse, serverChallenge, password, lmhash, nthash, use_ntlmv2 = USE_NTLMv2):
@@ -874,9 +881,13 @@ def KXKEY(flags, sessionBaseKey, lmChallengeResponse, serverChallenge, password,
       
 def hmac_md5(key, data):
     import hmac
+    if type(key) is not bytes:
+        key = key.encode("latin1")
     h = hmac.new(key)
+    if type(data) is not bytes:
+        data = data.encode("latin1")
     h.update(data)
-    return h.digest()
+    return h.digest().decode("latin1")
 
 def NTOWFv2( user, password, domain, hash = ''):
     if hash != '':
@@ -903,11 +914,11 @@ def computeResponseNTLMv2(flags, serverChallenge, clientChallenge, serverName, d
     # This is set at Local Security Policy -> Local Policies -> Security Options -> Server SPN target name validation
     # level
     if TEST_CASE is False:
-        av_pairs[NTLMSSP_AV_TARGET_NAME] = 'cifs/'.encode('utf-16le') + av_pairs[NTLMSSP_AV_HOSTNAME][1]
+        av_pairs[NTLMSSP_AV_TARGET_NAME] = 'cifs/'.encode('utf-16le') + av_pairs[NTLMSSP_AV_HOSTNAME][1].encode("latin1")
         if av_pairs[NTLMSSP_AV_TIME] is not None:
            aTime = av_pairs[NTLMSSP_AV_TIME][1]
         else:
-           aTime = struct.pack('<q', (116444736000000000 + calendar.timegm(time.gmtime()) * 10000000) )
+           aTime = struct.pack('<q', (116444736000000000 + calendar.timegm(time.gmtime()) * 10000000) ).decode("latin1")
            av_pairs[NTLMSSP_AV_TIME] = aTime
         serverName = av_pairs.getData()
     else:
@@ -918,7 +929,13 @@ def computeResponseNTLMv2(flags, serverChallenge, clientChallenge, serverName, d
 
     ntProofStr = hmac_md5(responseKeyNT, serverChallenge + temp)
 
+    if type(ntProofStr) is bytes:
+        ntProofStr = ntProofStr.decode("latin1")
     ntChallengeResponse = ntProofStr + temp
+    if type(serverChallenge) is bytes:
+        serverChallenge = serverChallenge.decode("latin1")
+    if type(clientChallenge) is bytes:
+        clientChallenge = clientChallenge.decode("latin1")
     lmChallengeResponse = hmac_md5(responseKeyNT, serverChallenge + clientChallenge) + clientChallenge
     sessionBaseKey = hmac_md5(responseKeyNT, ntProofStr)
 

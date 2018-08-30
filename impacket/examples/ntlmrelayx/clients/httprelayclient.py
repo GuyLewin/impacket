@@ -15,7 +15,7 @@
 #
 import re
 import ssl
-from httplib import HTTPConnection, HTTPSConnection, ResponseNotReady
+from http.client import HTTPConnection, HTTPSConnection, ResponseNotReady
 import base64
 
 from struct import unpack

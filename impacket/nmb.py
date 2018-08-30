@@ -31,9 +31,6 @@
 #
 # Altered source done by Alberto Solino (@agsolino)
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 import errno
 import re
 import select
@@ -305,7 +302,7 @@ class NBNodeStatusResponse(NBNSResourceRecord):
         self.set_mac_in_hexa(self.statistics['UNIT_ID'])
 
     def set_mac_in_hexa(self, data):
-        data_aux = u''
+        data_aux = ''
         for d in bytearray(data):
             if data_aux == '':
                 data_aux = '%02x' % d

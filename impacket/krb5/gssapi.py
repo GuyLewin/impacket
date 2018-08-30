@@ -141,7 +141,7 @@ class GSSAPI_RC4:
             token['SND_SEQ'] = struct.pack('>L', sequenceNumber) + '\xff'*4
 
         # Random confounder :)
-        token['Confounder'] = ''.join([rand.choice(string.letters) for _ in range(8)])
+        token['Confounder'] = ''.join([rand.choice(string.ascii_letters) for _ in range(8)])
 
         Ksign = HMAC.new(sessionKey.contents, 'signaturekey\0', MD5).digest()
         Sgn_Cksum = MD5.new(struct.pack('<L',13) + str(token)[:8] + token['Confounder'] + data).digest()

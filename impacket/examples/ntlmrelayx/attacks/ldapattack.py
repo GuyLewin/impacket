@@ -17,7 +17,7 @@
 #
 import random
 import string
-import thread
+import _thread
 import ldapdomaindump
 import ldap3
 from impacket import LOG
@@ -63,10 +63,10 @@ class LDAPAttack(ProtocolAttack):
             return
 
         # Random password
-        newPassword = ''.join(random.choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(15))
+        newPassword = ''.join(random.choice(string.ascii_letters + string.digits + string.punctuation) for _ in list(range(15)))
 
         # Random username
-        newUser = ''.join(random.choice(string.ascii_letters) for _ in range(10))
+        newUser = ''.join(random.choice(string.ascii_letters) for _ in list(range(10)))
         newUserDn = 'CN=%s,%s' % (newUser, parent)
         ucd = {
             'objectCategory': 'CN=Person,CN=Schema,CN=Configuration,%s' % domainDumper.root,
@@ -108,7 +108,7 @@ class LDAPAttack(ProtocolAttack):
             LOG.info('Adding user: %s to group %s result: OK' % (userName, groupName))
             LOG.info('Privilege escalation succesful, shutting down...')
             alreadyEscalated = True
-            thread.interrupt_main()
+            _thread.interrupt_main()
         else:
             LOG.error('Failed to add user to %s group: %s' % (groupName, str(self.client.result)))
 
@@ -290,7 +290,7 @@ class LDAPAttack(ProtocolAttack):
         If this is not set, the ACE applies to all object types.
         '''
         objectTypeGuid = bin_to_string(ace['Ace']['InheritedObjectType']).lower()
-        for objectType, guid in OBJECTTYPE_GUID_MAP.iteritems():
+        for objectType, guid in OBJECTTYPE_GUID_MAP.items():
             if objectType in objectClasses and objectTypeGuid:
                 return True
         # If none of these match, the ACE does not apply to this object

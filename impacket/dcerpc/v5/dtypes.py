@@ -73,7 +73,7 @@ class WIDESTR(NDRUniFixedArray):
 
     def __getitem__(self, key):
         if key == 'Data':
-            return self.fields[key].decode('utf-16le')
+            return self.fields[key].encode("latin1").decode('utf-16le')
         else:
             return NDR.__getitem__(self,key)
 
@@ -95,9 +95,9 @@ class STR(NDRSTRUCT):
     def dump(self, msg = None, indent = 0):
         if msg is None: msg = self.__class__.__name__
         if msg != '':
-            print "%s" % msg,
+            print("%s" % msg, end=' ')
         # Here just print the data
-        print " %r" % (self['Data']),
+        print(" %r" % (self['Data']), end=' ')
 
     def __setitem__(self, key, value):
         if key == 'Data':
@@ -134,9 +134,9 @@ class WSTR(NDRSTRUCT):
     def dump(self, msg = None, indent = 0):
         if msg is None: msg = self.__class__.__name__
         if msg != '':
-            print "%s" % msg,
+            print("%s" % msg, end=' ')
         # Here just print the data
-        print " %r" % (self['Data']),
+        print(" %r" % (self['Data']), end=' ')
 
     def getDataLen(self, data):
         return self["ActualCount"]*2 
@@ -144,7 +144,7 @@ class WSTR(NDRSTRUCT):
     def __setitem__(self, key, value):
         if key == 'Data':
             try:
-                self.fields[key] = value.encode('utf-16le')
+                self.fields[key] = value.encode('utf-16le').decode('latin1')
             except UnicodeDecodeError:
                 import sys
                 self.fields[key] = value.decode(sys.getfilesystemencoding()).encode('utf-16le')
@@ -156,7 +156,7 @@ class WSTR(NDRSTRUCT):
 
     def __getitem__(self, key):
         if key == 'Data':
-            return self.fields[key].decode('utf-16le')
+            return self.fields[key].encode("latin1").decode('utf-16le')
         else:
             return NDR.__getitem__(self,key)
 
@@ -358,12 +358,12 @@ class RPC_UNICODE_STRING(NDRSTRUCT):
     def dump(self, msg = None, indent = 0):
         if msg is None: msg = self.__class__.__name__
         if msg != '':
-            print "%s" % msg,
+            print("%s" % msg, end=' ')
 
         if isinstance(self.fields['Data'] , NDRPOINTERNULL):
-            print " NULL",
+            print(" NULL", end=' ')
         elif self.fields['Data']['ReferentID'] == 0:
-            print " NULL",
+            print(" NULL", end=' ')
         else:
             return self.fields['Data'].dump('',indent)
 
@@ -459,17 +459,17 @@ class PRPC_SID(NDRPOINTER):
 PSID = PRPC_SID
 
 # 2.4.3 ACCESS_MASK
-GENERIC_READ            = 0x80000000L
-GENERIC_WRITE           = 0x4000000L
-GENERIC_EXECUTE         = 0x20000000L
-GENERIC_ALL             = 0x10000000L
-MAXIMUM_ALLOWED         = 0x02000000L
-ACCESS_SYSTEM_SECURITY  = 0x01000000L
-SYNCHRONIZE             = 0x00100000L
-WRITE_OWNER             = 0x00080000L
-WRITE_DACL              = 0x00040000L
-READ_CONTROL            = 0x00020000L
-DELETE                  = 0x00010000L
+GENERIC_READ            = 0x80000000
+GENERIC_WRITE           = 0x4000000
+GENERIC_EXECUTE         = 0x20000000
+GENERIC_ALL             = 0x10000000
+MAXIMUM_ALLOWED         = 0x02000000
+ACCESS_SYSTEM_SECURITY  = 0x01000000
+SYNCHRONIZE             = 0x00100000
+WRITE_OWNER             = 0x00080000
+WRITE_DACL              = 0x00040000
+READ_CONTROL            = 0x00020000
+DELETE                  = 0x00010000
 
 # 2.4.5.1 ACL--RPC Representation
 class ACL(NDRSTRUCT):

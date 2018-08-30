@@ -32,7 +32,7 @@ MechTypes = {
 '\x2b\x06\x01\x04\x01\x82\x37\x02\x02\x1e': 'NEGOEX - SPNEGO Extended Negotiation Security Mechanism'
 }
 
-TypesMech = dict((v,k) for k, v in MechTypes.iteritems())
+TypesMech = dict((v,k) for k, v in iter(list(MechTypes.items())))
 
 def asn1encode(data = ''):
         #res = asn1.SEQUENCE(str).encode()
@@ -76,7 +76,7 @@ def asn1decode(data = ''):
             data = data[pad:]
             ans = data[:len2]
         # 1 byte length, string <= 0x7F
-	else:
+        else:
             pad = 0
             ans = data[:len1]
         return ans, len(ans)+pad+1
@@ -131,8 +131,8 @@ class GSSAPI:
         #pass
         
     def dump(self):
-        for i in self.fields.keys():
-            print "%s: {%r}" % (i,self[i])
+        for i in list(self.fields.keys()):
+            print(("%s: {%r}" % (i,self[i])))
 
     def getData(self):
         ans = pack('B',ASN1_AID)
@@ -246,12 +246,12 @@ class SPNEGO_NegTokenResp:
         self['ResponseToken'] = decode_data
 
     def dump(self):
-        for i in self.fields.keys():
-            print "%s: {%r}" % (i,self[i])
+        for i in list(self.fields.keys()):
+            print(("%s: {%r}" % (i,self[i])))
         
     def getData(self):
         ans = pack('B',SPNEGO_NegTokenResp.SPNEGO_NEG_TOKEN_RESP)
-        if self.fields.has_key('NegResult') and self.fields.has_key('SupportedMech'):
+        if 'NegResult' in self.fields and 'SupportedMech' in self.fields:
             # Server resp
             ans += asn1encode(
                pack('B', ASN1_SEQUENCE) +
@@ -267,7 +267,7 @@ class SPNEGO_NegTokenResp:
                pack('B',ASN1_RESPONSE_TOKEN ) +
                asn1encode(
                pack('B', ASN1_OCTET_STRING) + asn1encode(self['ResponseToken']))))
-        elif self.fields.has_key('NegResult'):
+        elif 'NegResult' in self.fields:
             # Server resp
             ans += asn1encode(
                pack('B', ASN1_SEQUENCE) + 
@@ -304,7 +304,7 @@ class SPNEGO_NegTokenInit(GSSAPI):
         payload = payload[1:]
         decode_data, total_bytes = asn1decode(payload)
         # Now we should have a SEQUENCE Tag
-	next_byte = unpack('B', decode_data[:1])[0]
+        next_byte = unpack('B', decode_data[:1])[0]
         if next_byte != ASN1_SEQUENCE:
             raise Exception('SEQUENCE tag not found %x' % next_byte)
         decode_data = decode_data[1:]
@@ -354,7 +354,7 @@ class SPNEGO_NegTokenInit(GSSAPI):
 
         mechToken = ''
         # Do we have tokens to send?
-        if self.fields.has_key('MechToken'):
+        if 'MechToken' in self.fields:
             mechToken = pack('B', ASN1_MECH_TOKEN) + asn1encode(
                 pack('B', ASN1_OCTET_STRING) + asn1encode(
                     self['MechToken']))

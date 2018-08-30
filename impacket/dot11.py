@@ -467,7 +467,7 @@ class Dot11(ProtocolPacket):
         self.header.set_byte(0, nb)
         
     def compute_checksum(self,bytes):
-        crcle=crc32(bytes)&0xffffffffL
+        crcle=crc32(bytes)&0xffffffff
         # ggrr this crc32 is in little endian, convert it to big endian 
         crc=struct.pack('<L', crcle)
          # Convert to long
@@ -1125,7 +1125,7 @@ class Dot11WEPData(ProtocolPacket):
         self.tail.set_long(-4, nb)
     
     def get_computed_icv(self):
-        crcle=crc32(self.body_string)&0xffffffffL
+        crcle=crc32(self.body_string)&0xffffffff
         # This crc32 is in little endian, convert it to big endian 
         crc=struct.pack('<L', crcle)
          # Convert to long

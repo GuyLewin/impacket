@@ -615,4 +615,4 @@ if __name__ == "__main__":
     
     for pkt in pkts:
         d = DNS(pkt)
-        print d
+        print(d)

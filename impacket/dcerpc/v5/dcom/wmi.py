@@ -61,7 +61,7 @@ class DCERPCSessionError(DCERPCException):
         DCERPCException.__init__(self, error_string, error_code, packet)
 
     def __str__( self ):
-        if hresult_errors.ERROR_MESSAGES.has_key(self.error_code):
+        if self.error_code in hresult_errors.ERROR_MESSAGES:
             error_msg_short = hresult_errors.ERROR_MESSAGES[self.error_code][0]
             error_msg_verbose = hresult_errors.ERROR_MESSAGES[self.error_code][1] 
             return 'WMI SessionError: code: 0x%x - %s - %s' % (self.error_code, error_msg_short, error_msg_verbose)
@@ -132,6 +132,8 @@ class ENCODED_STRING(Structure):
     )
 
     def __init__(self, data = None, alignment = 0):
+        if type(data) is bytes:
+            data = data.decode("latin1")
         Structure.__init__(self, data, alignment)
         if data is not None:
             # Let's first check the commonHdr
@@ -539,8 +541,8 @@ class CLASS_PART(Structure):
     def getProperties(self):
         heap = self["ClassHeap"]["HeapItem"]
         properties =  self["PropertyLookupTable"].getProperties(self["ClassHeap"]["HeapItem"])
-        sorted_props = sorted(properties.keys(), key=lambda k: properties[k]['order'])
-        valueTableOff = (len(properties) - 1) / 4 + 1
+        sorted_props = sorted(list(properties.keys()), key=lambda k: properties[k]['order'])
+        valueTableOff = int((len(properties) - 1) / 4 + 1)
         valueTable = self['NdTable_ValueTable'][valueTableOff:]
         for key in sorted_props:
             # Let's get the default Values
@@ -785,9 +787,9 @@ class INSTANCE_TYPE(Structure):
 
     def getValues(self, properties):
         heap = self["InstanceHeap"]["HeapItem"]
-        valueTableOff = (len(properties) - 1) / 4 + 1
+        valueTableOff = int((len(properties) - 1) / 4 + 1)
         valueTable = self['NdTable_ValueTable'][valueTableOff:]
-        sorted_props = sorted(properties.keys(), key=lambda k: properties[k]['order'])
+        sorted_props = sorted(list(properties.keys()), key=lambda k: properties[k]['order'])
         for key in sorted_props:
             pType = properties[key]['type'] & (~(CIM_ARRAY_FLAG|Inherited))
             if properties[key]['type'] & CIM_ARRAY_FLAG:
@@ -868,11 +870,11 @@ class OBJECT_BLOCK(Structure):
         qualifiers = pClass.getQualifiers()
 
         for qualifier in qualifiers:
-            print "[%s]" % qualifier
+            print("[%s]" % qualifier)
 
         className = pClass.getClassName()
 
-        print "class %s \n{" % className
+        print("class %s \n{" % className)
 
         properties = pClass.getProperties()
         if cInstance is not None:
@@ -883,52 +885,52 @@ class OBJECT_BLOCK(Structure):
                 qualifiers = properties[pName]['qualifiers']
                 for qName in qualifiers:
                     if qName != 'CIMTYPE':
-                        print '\t[%s(%s)]' % (qName, qualifiers[qName])
-                print "\t%s %s" % (properties[pName]['stype'], properties[pName]['name']),
+                        print('\t[%s(%s)]' % (qName, qualifiers[qName]))
+                print("\t%s %s" % (properties[pName]['stype'], properties[pName]['name']), end=' ')
                 if properties[pName]['value'] is not None:
                     if properties[pName]['type'] == CIM_TYPE_ENUM.CIM_TYPE_OBJECT.value:
-                        print '= IWbemClassObject\n'
+                        print('= IWbemClassObject\n')
                     elif properties[pName]['type'] == CIM_TYPE_ENUM.CIM_ARRAY_OBJECT.value:
                         if properties[pName]['value'] == 0:
-                            print '= %s\n' % properties[pName]['value']
+                            print('= %s\n' % properties[pName]['value'])
                         else:
-                            print '= %s\n' % list('IWbemClassObject' for _ in range(len(properties[pName]['value'])))
+                            print('= %s\n' % list('IWbemClassObject' for _ in list(range(len(properties[pName]['value'])))))
                     else:
-                        print '= %s\n' % properties[pName]['value']
+                        print('= %s\n' % properties[pName]['value'])
                 else:
-                    print '\n'
+                    print('\n')
 
-        print 
+        print() 
         methods = pClass.getMethods()
         for methodName in methods:
             for qualifier in methods[methodName]['qualifiers']:
-                print '\t[%s]' % qualifier
+                print('\t[%s]' % qualifier)
 
             if methods[methodName]['InParams'] is None and methods[methodName]['OutParams'] is None: 
-                print '\t%s %s();\n' % ('void', methodName)
+                print('\t%s %s();\n' % ('void', methodName))
             if methods[methodName]['InParams'] is None and len(methods[methodName]['OutParams']) == 1:
-                print '\t%s %s();\n' % (methods[methodName]['OutParams']['ReturnValue']['stype'], methodName)
+                print('\t%s %s();\n' % (methods[methodName]['OutParams']['ReturnValue']['stype'], methodName))
             else:
                 returnValue = ''
                 if methods[methodName]['OutParams'] is not None:
                     # Search the Return Value
                     #returnValue = (item for item in method['OutParams'] if item["name"] == "ReturnValue").next()
-                    if methods[methodName]['OutParams'].has_key('ReturnValue'):
+                    if 'ReturnValue' in methods[methodName]['OutParams']:
                         returnValue = methods[methodName]['OutParams']['ReturnValue']['stype']
  
-                print '\t%s %s(\n' % (returnValue, methodName),
+                print('\t%s %s(\n' % (returnValue, methodName), end=' ')
                 if methods[methodName]['InParams'] is not None:
                     for pName  in methods[methodName]['InParams']:
-                        print '\t\t[in]    %s %s,' % (methods[methodName]['InParams'][pName]['stype'], pName)
+                        print('\t\t[in]    %s %s,' % (methods[methodName]['InParams'][pName]['stype'], pName))
 
                 if methods[methodName]['OutParams'] is not None:
                     for pName in methods[methodName]['OutParams']:
                         if pName != 'ReturnValue':
-                            print '\t\t[out]    %s %s,' % (methods[methodName]['OutParams'][pName]['stype'], pName)
+                            print('\t\t[out]    %s %s,' % (methods[methodName]['OutParams'][pName]['stype'], pName))
 
-                print '\t);\n'
+                print('\t);\n')
 
-        print "}"
+        print("}")
 
     def parseClass(self, pClass, cInstance = None):
         classDict = OrderedDict()
@@ -2301,7 +2303,7 @@ class IWbemClassObject(IRemUnknown):
             # Let's see if there's a key property so we can ExecMethod
             keyProperty = None
             for pName in properties:
-                if properties[pName]['qualifiers'].has_key('key'):
+                if 'key' in properties[pName]['qualifiers']:
                     keyProperty = pName
 
             if keyProperty is None:
@@ -2311,7 +2313,7 @@ class IWbemClassObject(IRemUnknown):
                     classObject,_ = self.__iWbemServices.GetObject(self.getClassName())
                     self.__methods = classObject.getMethods()
 
-                if self.__methods.has_key(attr):
+                if attr in self.__methods:
                     # Now we gotta build the class name to be called through ExecMethod
                     if self.getProperties()[keyProperty]['stype'] != 'string':
                         instanceName = '%s.%s=%s' % (
@@ -2619,7 +2621,7 @@ class IWbemClassObject(IRemUnknown):
 
                 ndTable = 0
                 for i in range(len(args)):
-                    paramDefinition = methodDefinition['InParams'].values()[i]
+                    paramDefinition = list(methodDefinition['InParams'].values())[i]
                     inArg = args[i]
 
                     pType = paramDefinition['type'] & (~(CIM_ARRAY_FLAG|Inherited)) 
@@ -2651,7 +2653,7 @@ class IWbemClassObject(IRemUnknown):
                             ndTable |= 3 << (2*i)
                     else:
                         strIn = ENCODED_STRING()
-                        if type(inArg) is unicode:
+                        if type(inArg) is str:
                             # The Encoded-String-Flag is set to 0x01 if the sequence of characters that follows
                             # consists of UTF-16 characters (as specified in [UNICODE]) followed by a UTF-16 null
                             # terminator.
@@ -2729,7 +2731,7 @@ class IWbemClassObject(IRemUnknown):
                 return self.__iWbemServices.ExecMethod(classOrInstance, methodDefinition['name'], pInParams = objRefCustomIn )
                 #return self.__iWbemServices.ExecMethod('Win32_Process.Handle="436"', methodDefinition['name'],
                 #                                       pInParams=objRefCustomIn).getObject().ctCurrent['properties']
-            except Exception, e:
+            except Exception as e:
                 if LOG.level == logging.DEBUG:
                     import traceback
                     traceback.print_exc()
@@ -2843,8 +2845,9 @@ class IEnumWbemClassObject(IRemUnknown):
         resp = self.request(request, iid = self._iid, uuid = self.get_iPid())
         interfaces = list()
         for interface in resp['apObjects']:
+            abdata = [x.decode("latin1") for x in interface['abData']]
             interfaces.append(IWbemClassObject(
-                INTERFACE(self.get_cinstance(), ''.join(interface['abData']), self.get_ipidRemUnknown(),
+                INTERFACE(self.get_cinstance(), ''.join(abdata), self.get_ipidRemUnknown(),
                           oxid=self.get_oxid(), target=self.get_target()), self.__iWbemServices))
 
         return interfaces
@@ -3049,8 +3052,9 @@ class IWbemServices(IRemUnknown):
         request['lFlags'] = lFlags
         request['pCtx'] = pCtx
         resp = self.request(request, iid = self._iid, uuid = self.get_iPid())
+        abdata = [x.decode("latin1") for x in resp['ppEnum']['abData']]
         return IEnumWbemClassObject(
-            INTERFACE(self.get_cinstance(), ''.join(resp['ppEnum']['abData']), self.get_ipidRemUnknown(),
+            INTERFACE(self.get_cinstance(), ''.join(abdata), self.get_ipidRemUnknown(),
                       target=self.get_target()), self)
 
     def ExecQueryAsync(self, strQuery, lFlags=0, pCtx=NULL):
@@ -3153,8 +3157,9 @@ class IWbemLevel1Login(IRemUnknown):
         request['lFlags'] = 0
         request['pCtx'] = pCtx
         resp = self.request(request, iid = self._iid, uuid = self.get_iPid())
+        abdata = [x.decode("latin1") for x in resp['ppNamespace']['abData']]
         return IWbemServices(
-            INTERFACE(self.get_cinstance(), ''.join(resp['ppNamespace']['abData']), self.get_ipidRemUnknown(),
+            INTERFACE(self.get_cinstance(), ''.join(abdata), self.get_ipidRemUnknown(),
                       target=self.get_target()))
 
 

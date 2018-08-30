@@ -116,7 +116,7 @@ class ThreeBytesBigEndian(Field):
 class ProtocolPacketMetaklass(type):
     def __new__(cls, name, bases, d):
         d["_fields"] = []
-        items = d.items()
+        items = list(d.items())
         if not object in bases:
             bases += (object,)
         for k,v in items:
@@ -141,9 +141,7 @@ class ProtocolPacketMetaklass(type):
         
         return type.__new__(cls, name, bases, d)
 
-class ProtocolPacket(ip.ProtocolPacket):
-    __metaclass__ = ProtocolPacketMetaklass  
-
+class ProtocolPacket(ip.ProtocolPacket, metaclass=ProtocolPacketMetaklass):
     def __init__(self, buff = None):
         ip.ProtocolPacket.__init__(self, self.header_size, self.tail_size)
         if buff:

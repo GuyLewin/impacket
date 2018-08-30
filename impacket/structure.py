@@ -4,8 +4,6 @@
 # of the Apache Software License. See the accompanying LICENSE file
 # for more information.
 #
-from __future__ import division
-from __future__ import print_function
 from struct import pack, unpack, calcsize
 from six import b, PY3
 
@@ -99,7 +97,7 @@ class Structure:
 
     def packField(self, fieldName, format = None):
         if self.debug:
-            print("packField( %s | %s )" % (fieldName, format))
+            print(("packField( %s | %s )" % (fieldName, format)))
 
         if format is None:
             format = self.formatForField(fieldName)
@@ -110,14 +108,14 @@ class Structure:
             ans = self.pack(format, None, field = fieldName)
 
         if self.debug:
-            print("\tanswer %r" % ans)
+            print(("\tanswer %r" % ans))
 
         return ans
 
     def getData(self):
         if self.data is not None:
             return self.data
-        data = bytes()
+        data = str()
         for field in self.commonHdr+self.structure:
             try:
                 data += self.packField(field[0], field[1])
@@ -129,7 +127,7 @@ class Structure:
                 raise
             if self.alignment:
                 if len(data) % self.alignment:
-                    data += (b'\x00'*self.alignment)[:-(len(data) % self.alignment)]
+                    data += ('\x00'*self.alignment)[:-(len(data) % self.alignment)]
             
         #if len(data) % self.alignment: data += ('\x00'*self.alignment)[:-(len(data) % self.alignment)]
         return data
@@ -138,10 +136,10 @@ class Structure:
         self.rawData = data
         for field in self.commonHdr+self.structure:
             if self.debug:
-                print("fromString( %s | %s | %r )" % (field[0], field[1], data))
+                print(("fromString( %s | %s | %r )" % (field[0], field[1], data)))
             size = self.calcUnpackSize(field[1], data, field[0])
             if self.debug:
-                print("  size = %d" % size)
+                print(("  size = %d" % size))
             dataClassOrCode = b
             if len(field) > 2:
                 dataClassOrCode = field[2]
@@ -177,20 +175,20 @@ class Structure:
 
     def pack(self, format, data, field = None):
         if self.debug:
-            print("  pack( %s | %r | %s)" %  (format, data, field))
+            print(("  pack( %s | %r | %s)" %  (format, data, field)))
 
         if field:
             addressField = self.findAddressFieldFor(field)
             if (addressField is not None) and (data is None):
-                return b''
+                return ''
 
         # void specifier
         if format[:1] == '_':
-            return b''
+            return ''
 
         # quote specifier
         if format[:1] == "'" or format[:1] == '"':
-            return b(format[1:])
+            return format[1:]
 
         # code specifier
         two = format.split('=')
@@ -224,7 +222,7 @@ class Structure:
         # array specifier
         two = format.split('*')
         if len(two) == 2:
-            answer = bytes()
+            answer = str()#bytes()
             for each in data:
                 answer += self.pack(two[1], each)
             if two[0]:
@@ -238,24 +236,24 @@ class Structure:
         # "printf" string specifier
         if format[:1] == '%':
             # format string like specifier
-            return b(format % data)
+            return (format % data)
 
         # asciiz specifier
         if format[:1] == 'z':
-            return bytes(b(data)+b('\0'))
+            return str((data)+('\0'))
 
         # unicode specifier
         if format[:1] == 'u':
-            return bytes(data+b('\0\0') + (len(data) & 1 and b('\0') or b''))
+            return str(data+('\0\0') + (len(data) & 1 and ('\0') or ''))
 
         # DCE-RPC/NDR string specifier
         if format[:1] == 'w':
             if len(data) == 0:
-                data = b('\0\0')
+                data = ('\0\0')
             elif len(data) % 2:
-                data = b(data) + b('\0')
-            l = pack('<L', len(data)//2)
-            return b''.join([l, l, b('\0\0\0\0'), data])
+                data = (data) + ('\0')
+            l = pack('<L', len(data)//2).decode("latin1")
+            return ''.join([l, l, '\0\0\0\0', data])
 
         if data is None:
             raise Exception("Trying to pack None")
@@ -264,17 +262,21 @@ class Structure:
         if format[:1] == ':':
             if isinstance(data, Structure):
                 return data.getData()
+            elif type(data) is bytes:
+                return data.decode("latin1")
             elif isinstance(data, bytes) != True:
-                return bytes(b(data))
+                return str((data))
             else:
                 return data
 
         # struct like specifier
-        return pack(format, data)
+        if type(data) is str:
+            data = data.encode("latin1")
+        return pack(format.encode("latin1"), data).decode("latin1")
 
     def unpack(self, format, data, dataClassOrCode = b, field = None):
         if self.debug:
-            print("  unpack( %s | %r )" %  (format, data))
+            print(("  unpack( %s | %r )" %  (format, data)))
 
         if field:
             addressField = self.findAddressFieldFor(field)
@@ -294,7 +296,7 @@ class Structure:
         # quote specifier
         if format[:1] == "'" or format[:1] == '"':
             answer = format[1:]
-            if b(answer) != data:
+            if (answer) != data:
                 raise Exception("Unpacked data doesn't match constant value '%r' should be '%r'" % (data, answer))
             return answer
 
@@ -340,32 +342,36 @@ class Structure:
 
         # asciiz specifier
         if format == 'z':
-            if data[-1:] != b('\x00'):
+            if data[-1:] != ('\x00'):
                 raise Exception("%s 'z' field is not NUL terminated: %r" % (field, data))
-            if PY3:
-                return data[:-1].decode('ascii')
-            else:
-                return data[:-1]
+            return data[:-1]#.decode('ascii') # remove trailing NUL
 
         # unicode specifier
         if format == 'u':
-            if data[-2:] != b('\x00\x00'):
+            if data[-2:] != ('\x00\x00'):
                 raise Exception("%s 'u' field is not NUL-NUL terminated: %r" % (field, data))
             return data[:-2] # remove trailing NUL
 
         # DCE-RPC/NDR string specifier
         if format == 'w':
-            l = unpack('<L', data[:4])[0]
+            l = unpack('<L', data[:4])[0].decode("latin1")
             return data[12:12+l*2]
 
         # literal specifier
         if format == ':':
             if isinstance(data, bytes) and dataClassOrCode is b:
-                return data
+                return data.decode("latin1")
+            if isinstance(data, bytes):
+                data.decode("latin1")
             return dataClassOrCode(data)
 
         # struct like specifier
-        return unpack(format, data)[0]
+        if type(data) is str:
+            data = data.encode("latin1")
+        unpack_res = unpack(format, data)[0]
+        if type(unpack_res) is bytes:
+            unpack_res = unpack_res.decode("latin1")
+        return unpack_res
 
     def calcPackSize(self, format, data, field = None):
 #        # print "  calcPackSize  %s:%r" %  (format, data)
@@ -440,7 +446,7 @@ class Structure:
 
     def calcUnpackSize(self, format, data, field = None):
         if self.debug:
-            print("  calcUnpackSize( %s | %s | %r)" %  (field, format, data))
+            print(("  calcUnpackSize( %s | %s | %r)" %  (field, format, data)))
 
         # void specifier
         if format[:1] == '_':
@@ -503,16 +509,16 @@ class Structure:
 
         # asciiz specifier
         if format[:1] == 'z':
-            return data.index(b('\x00'))+1
+            return data.index('\x00')+1
 
         # asciiz specifier
         if format[:1] == 'u':
-            l = data.index(b('\x00\x00'))
+            l = data.index(('\x00\x00'))
             return l + (l & 1 and 3 or 2)
 
         # DCE-RPC/NDR string specifier
         if format[:1] == 'w':
-            l = unpack('<L', data[:4])[0]
+            l = unpack('<L', data[:4].encode("latin1"))[0].decode("latin1")
             return 12+l*2
 
         # literal specifier
@@ -557,9 +563,9 @@ class Structure:
                 return (self.zeroValue(two[1]),)*int(two[0])
                         
         if not format.find('*') == -1: return ()
-        if 's' in format: return b''
-        if format in ['z',':','u']: return b''
-        if format == 'w': return b('\x00\x00')
+        if 's' in format: return ''
+        if format in ['z',':','u']: return ''
+        if format == 'w': return ('\x00\x00')
 
         return 0
 
@@ -570,7 +576,7 @@ class Structure:
     def dump(self, msg = None, indent = 0):
         if msg is None: msg = self.__class__.__name__
         ind = ' '*indent
-        print("\n%s" % msg)
+        print(("\n%s" % msg))
         fixedFields = []
         for field in self.commonHdr+self.structure:
             i = field[0] 
@@ -578,27 +584,27 @@ class Structure:
                 fixedFields.append(i)
                 if isinstance(self[i], Structure):
                     self[i].dump('%s%s:{' % (ind,i), indent = indent + 4)
-                    print("%s}" % ind)
+                    print(("%s}" % ind))
                 else:
-                    print("%s%s: {%r}" % (ind,i,self[i]))
+                    print(("%s%s: {%r}" % (ind,i,self[i])))
         # Do we have remaining fields not defined in the structures? let's 
         # print them
         remainingFields = list(set(self.fields) - set(fixedFields))
         for i in remainingFields:
             if isinstance(self[i], Structure):
                 self[i].dump('%s%s:{' % (ind,i), indent = indent + 4)
-                print("%s}" % ind)
+                print(("%s}" % ind))
             else:
-                print("%s%s: {%r}" % (ind,i,self[i]))
+                print(("%s%s: {%r}" % (ind,i,self[i])))
 
 def pretty_print(x):
     if chr(x) in '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ ':
        return chr(x)
     else:
-       return u'.'
+       return '.'
 
 def hexdump(data, indent = ''):
-    x=bytearray(data)
+    x=bytearray((data))
     strLen = len(x)
     i = 0
     while i < strLen:
@@ -607,7 +613,7 @@ def hexdump(data, indent = ''):
             if i+j < strLen:
                 line += "%02X " % x[i+j]
             else:
-                line += u"   "
+                line += "   "
             if j%16 == 7:
                 line += " "
         line += "  "
@@ -625,14 +631,14 @@ class _StructureTest:
 
     def run(self):
         print()
-        print("-"*70)
+        print(("-"*70))
         testName = self.__class__.__name__
-        print("starting test: %s....." % testName)
+        print(("starting test: %s....." % testName))
         a = self.create()
         self.populate(a)
         a.dump("packing.....")
         a_str = a.getData()
-        print("packed: %r" % a_str)
+        print(("packed: %r" % a_str))
         print("unpacking.....")
         b = self.create(a_str)
         b.dump("unpacked.....")
@@ -641,7 +647,7 @@ class _StructureTest:
         hexdump(b_str)
         if b_str != a_str:
             print("ERROR: original packed and repacked don't match")
-            print("packed: %r" % b_str)
+            print(("packed: %r" % b_str))
 
 class _Test_simple(_StructureTest):
     class theClass(Structure):

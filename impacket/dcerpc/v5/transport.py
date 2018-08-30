@@ -138,15 +138,15 @@ class DCERPCTransport:
         self.set_credentials('','')
 
     def connect(self):
-        raise RuntimeError, 'virtual function'
+        raise RuntimeError('virtual function')
     def send(self,data=0, forceWriteAndx = 0, forceRecv = 0):
-        raise RuntimeError, 'virtual function'
+        raise RuntimeError('virtual function')
     def recv(self, forceRecv = 0, count = 0):
-        raise RuntimeError, 'virtual function'
+        raise RuntimeError('virtual function')
     def disconnect(self):
-        raise RuntimeError, 'virtual function'
+        raise RuntimeError('virtual function')
     def get_socket(self):
-        raise RuntimeError, 'virtual function'
+        raise RuntimeError('virtual function')
 
     def get_connect_timeout(self):
         return self.__connect_timeout
@@ -256,7 +256,7 @@ class UDPTransport(DCERPCTransport):
             af, socktype, proto, canonname, sa = socket.getaddrinfo(self.getRemoteHost(), self.get_dport(), 0, socket.SOCK_DGRAM)[0]
             self.__socket = socket.socket(af, socktype, proto)
             self.__socket.settimeout(self.get_connect_timeout())
-        except socket.error, msg:
+        except socket.error as msg:
             self.__socket = None
             raise DCERPCException("Could not connect: %s" % msg)
 
@@ -271,6 +271,8 @@ class UDPTransport(DCERPCTransport):
         return 1
 
     def send(self,data, forceWriteAndx = 0, forceRecv = 0):
+        if type(data) is str:
+            data = data.encode("latin1")
         self.__socket.sendto(data, (self.getRemoteHost(), self.get_dport()))
 
     def recv(self, forceRecv = 0, count = 0):
@@ -297,7 +299,7 @@ class TCPTransport(DCERPCTransport):
         try:
             self.__socket.settimeout(self.get_connect_timeout())
             self.__socket.connect(sa)
-        except socket.error, msg:
+        except socket.error as msg:
             self.__socket.close()
             raise DCERPCException("Could not connect: %s" % msg)
         return 1
@@ -305,7 +307,7 @@ class TCPTransport(DCERPCTransport):
     def disconnect(self):
         try:
             self.__socket.close()
-        except socket.error, msg:
+        except socket.error as msg:
             self.__socket = None
             return 0
         return 1
@@ -317,18 +319,22 @@ class TCPTransport(DCERPCTransport):
                 toSend = data[offset:offset+self._max_send_frag]
                 if not toSend:
                     break
+                if type(toSend) is str:
+                    toSend = toSend.encode("latin1")
                 self.__socket.send(toSend)
                 offset += len(toSend)
         else:
+            if type(data) is str:
+                data = data.encode("latin1")
             self.__socket.send(data)
 
     def recv(self, forceRecv = 0, count = 0):
         if count:
             buffer = ''
             while len(buffer) < count:
-               buffer += self.__socket.recv(count-len(buffer))
+               buffer += self.__socket.recv(count-len(buffer)).decode("latin1")
         else:
-            buffer = self.__socket.recv(8192)
+            buffer = self.__socket.recv(8192).decode("latin1")
         return buffer
 
     def get_socket(self):

@@ -76,8 +76,8 @@ class MYMSSQL(MSSQL):
         #Also partly copied from tds.py
         login = TDS_LOGIN()
 
-        login['HostName'] = (''.join([random.choice(string.letters) for _ in range(8)])).encode('utf-16le')
-        login['AppName']  = (''.join([random.choice(string.letters) for _ in range(8)])).encode('utf-16le')
+        login['HostName'] = (''.join([random.choice(string.ascii_letters) for _ in range(8)])).encode('utf-16le')
+        login['AppName']  = (''.join([random.choice(string.ascii_letters) for _ in range(8)])).encode('utf-16le')
         login['ServerName'] = self.server.encode('utf-16le')
         login['CltIntName']  = login['AppName']
         login['ClientPID'] = random.randint(0,1024)
@@ -115,7 +115,7 @@ class MYMSSQL(MSSQL):
         self.sendTDS(TDS_SSPI, str(token))
         tds = self.recvTDS()
         self.replies = self.parseReply(tds['Data'])
-        if self.replies.has_key(TDS_LOGINACK_TOKEN):
+        if TDS_LOGINACK_TOKEN in self.replies:
             #Once we are here, there is a full connection and we can
             #do whatever the current user has rights to do
             self.sessionData['AUTH_ANSWER'] = tds
