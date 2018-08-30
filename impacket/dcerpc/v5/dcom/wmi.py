@@ -846,6 +846,9 @@ class OBJECT_BLOCK(Structure):
         self.ctParent  = None
         self.ctCurrent = None
 
+        if type(data) is bytes:
+            data = data.decode("latin1")
+
         if data is not None:
             self.structure = ()
             if ord(data[0]) & 0x4: 
@@ -2907,12 +2910,14 @@ class IWbemServices(IRemUnknown):
         request['lFlags'] = lFlags
         request['pCtx'] = pCtx
         resp = self.request(request, iid = self._iid, uuid = self.get_iPid())
+        abdata = [x.decode("latin1") for x in resp['ppObject']['abData']]
         ppObject = IWbemClassObject(
-            INTERFACE(self.get_cinstance(), ''.join(resp['ppObject']['abData']), self.get_ipidRemUnknown(),
+            INTERFACE(self.get_cinstance(), ''.join(abdata), self.get_ipidRemUnknown(),
                       oxid=self.get_oxid(), target=self.get_target()), self)
         if resp['ppCallResult'] != NULL:
+            abdata = [x.decode("latin1") for x in resp['ppObject']['abData']]
             ppcallResult = IWbemCallResult(
-                INTERFACE(self.get_cinstance(), ''.join(resp['ppObject']['abData']), self.get_ipidRemUnknown(),
+                INTERFACE(self.get_cinstance(), ''.join(abdata), self.get_ipidRemUnknown(),
                           target=self.get_target()))
         else:
             ppcallResult = NULL
