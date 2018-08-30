@@ -1069,7 +1069,7 @@ class DCOMConnection:
                 DCOMConnection.PINGTIMER.cancel()
                 DCOMConnection.PINGTIMER.join()
                 DCOMConnection.PINGTIMER = None
-        if self.__target in INTERFACE.CONNECTIONS:
+        if self.__target in INTERFACE.CONNECTIONS and currentThread().getName() in INTERFACE.CONNECTIONS[self.__target]:
             del(INTERFACE.CONNECTIONS[self.__target][currentThread().getName()])
         self.__portmap.disconnect()
         #print INTERFACE.CONNECTIONS
