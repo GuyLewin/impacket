@@ -304,7 +304,7 @@ def getKerberosTGT(clientName, password, domain, lmhash, nthash, aesKey='', kdcH
     # (Section 5.4.2)
     try:
         plainText = cipher.decrypt(key, 3, str(cipherText))
-    except InvalidChecksum, e:
+    except InvalidChecksum as e:
         # probably bad password if preauth is disabled
         if preAuth is False:
             error_msg = "failed to decrypt session key: %s" % str(e)
